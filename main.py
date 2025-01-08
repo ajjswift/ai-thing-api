@@ -30,11 +30,13 @@ client = weaviate.Client(
 # Home route
 @app.route('/')
 def home():
+    """The home route"""
     return "Welcome to the Flask web server!"
 
 # Example API route
 @app.route('/api/data', methods=['GET'])
 def get_data():
+    """A test route."""
     data = {
         "message": "Hello, Flask!",
         "status": "success"
@@ -44,6 +46,7 @@ def get_data():
 # /question/get with input
 @app.route('/question/get', methods=['GET'])
 def get_question_route():
+    """Gets questions from the weaviate database and returns to the user."""
     # Get the search query from the request
     search_query = request.args.get('search', '').strip()
     limit = int(request.args.get('limit', '').strip())
@@ -75,8 +78,8 @@ def get_question_route():
             return jsonify({"message": "No results found"}), 404
 
         return jsonify(results)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception as e:# pylint: disable=broad-exception-caught
+        return jsonify({"error": str(e)}), 500 
 
 
 if __name__ == '__main__' and client.is_ready():
