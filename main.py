@@ -1,9 +1,10 @@
+import os
+import json
+
 from flask import Flask, jsonify, request
 import weaviate
 from weaviate.auth import AuthApiKey
 from dotenv import load_dotenv
-import os
-import json
 from flask_cors import CORS
 
 # Load environment variables from .env file
@@ -42,7 +43,7 @@ def get_data():
 
 # /question/get with input
 @app.route('/question/get', methods=['GET'])
-def getQuestionRoute():
+def get_question_route():
     # Get the search query from the request
     search_query = request.args.get('search', '').strip()
     limit = int(request.args.get('limit', '').strip())
@@ -76,54 +77,7 @@ def getQuestionRoute():
         return jsonify(results)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
-""" @app.route('/question/store', methods=['POST'])
-def storeQuestionRoute():
-    # Parse JSON payload from the request
-    data = request.get_json()
 
-    # Validate required fields
-    required_fields = ["question", "answer", "incorrect_answers", "topic", "marks", "class"]
-    missing_fields = [field for field in required_fields if field not in data or not data[field]]
-
-    if missing_fields:
-        return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400
-
-    # Extract data
-    question = data["question"].strip()
-    answer = data["answer"].strip()
-    incorrect_answers = data["incorrect_answers"]
-    topic = data["topic"].strip()
-    marks = data["marks"]
-    className = data["class"].strip()
-
-    # Ensure incorrect_answers is a list
-    if not isinstance(incorrect_answers, list):
-        return jsonify({"error": "incorrect_answers must be a list"}), 400
-
-    # Debugging output
-    print({
-        "question": question,
-        "answer": answer,
-        "incorrect_answers": incorrect_answers,
-        "topic": topic,
-        "marks": marks,
-        "class": className
-    })
-
-    uuid = client.data_object.create(
-        class_name=className,
-        data_object={
-            "question": question,
-            "answer": answer,
-            "incorrect_answers": incorrect_answers,
-            "topic": topic,
-            "marks": marks,
-        },
-    )
-
-    # Simulate storing data (add actual database/Weaviate code here)
-    return jsonify({"message": "Question stored successfully", uuid: uuid}), 201 """
 
 if __name__ == '__main__' and client.is_ready():
     print("Weaviate Connected. Running FLASK")
