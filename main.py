@@ -49,7 +49,8 @@ def get_question_route():
     """Gets questions from the weaviate database and returns to the user."""
     # Get the search query from the request
     search_query = request.args.get('search', '').strip()
-    limit = int(request.args.get('limit', '').strip())
+    limit = request.args.get('limit', '').strip()
+    
     
     print(request.headers)
     passed_access_key = request.headers['Authorization']
@@ -59,6 +60,8 @@ def get_question_route():
 
     if not limit:
         limit = 2
+    else:
+        limit = int(limit)
 
     if not search_query:
         return jsonify({"error": "Search query is required"}), 400
