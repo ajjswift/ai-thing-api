@@ -50,12 +50,9 @@ def get_question_route():
     # Get the search query from the request
     search_query = request.args.get('search', '').strip()
     limit = request.args.get('limit', '').strip()
-    
-    
-    print(request.headers)
-    passed_access_key = request.headers['Authorization']
 
-    if access_key != passed_access_key:
+
+    if 'Authorization' not in request.headers or request.headers['Authorization'] != access_key:
         return jsonify({"error": "Access key required"}), 403
 
     if not limit:
