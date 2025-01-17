@@ -9,7 +9,7 @@ from weaviate.auth import AuthApiKey
 from dotenv import load_dotenv
 from flask_cors import CORS
 from werkzeug.utils import secure_filename  # Import for secure filename handling
-
+import hashlib
 
 # Load environment variables from .env file
 load_dotenv()
@@ -102,6 +102,17 @@ def post_training_data():
             return jsonify({"error": "Invalid file type. Must be .burlywood"}), 400
 
         try:
+            # Calculate checksum
+            file_content = file.read()
+            checksum = hashlib.sha256(file_content).hexdigest()
+            
+            # Write checksum to hash.txt
+            with open('hash.txt', 'a') as hash_file:
+                hash_file.write(f"{secure_filename(file.filename)}: {checksum}\n")
+            
+            # Reset file pointer to beginning for upload
+            file.seek(0)
+            
             # Upload file to DO Spaces
             s3_client = boto3.client('s3',
                 endpoint_url='https://lon1.digitaloceanspaces.com', 
@@ -121,7 +132,8 @@ def post_training_data():
 
             return jsonify({
                 "message": "File uploaded successfully",
-                "filename": file_name
+                "filename": file_name,
+                "checksum": checksum
             }), 200
 
         except Exception as e:
