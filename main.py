@@ -85,6 +85,22 @@ def get_question_route():
     except Exception as e:# pylint: disable=broad-exception-caught
         return jsonify({"error": str(e)}), 500 
     
+
+@app.route('/training_checksum', methods=['GET'])
+def get_checksum():
+    if 'Authorization' not in request.headers or request.headers['Authorization'] != access_key:
+        print(request.headers)
+        return jsonify({"error": "Access key required"}), 403
+    
+    with open('hash.txt') as hash_file: checksum = hash_file.read()
+
+
+    return jsonify({
+                "checksum": checksum
+    }), 200
+
+
+
 @app.route('/training_data', methods=['POST', 'GET'])
 def post_training_data():
     if 'Authorization' not in request.headers or request.headers['Authorization'] != access_key:
@@ -108,7 +124,7 @@ def post_training_data():
             
             # Write checksum to hash.txt
             with open('hash.txt', 'a') as hash_file:
-                hash_file.write(f"{secure_filename(file.filename)}: {checksum}\n")
+                hash_file.write(f"{checksum}")
             
             # Reset file pointer to beginning for upload
             file.seek(0)
