@@ -120,9 +120,9 @@ def post_training_data():
             file_content = file.read()
             checksum = hashlib.sha256(file_content).hexdigest()
             
-            # Write checksum to hash.txt
-            with open('hash.txt', 'a') as hash_file:
-                hash_file.write(f"{checksum}")
+            # Write checksum to hash.txt, overwriting previous content
+            with open('hash.txt', 'w') as hash_file:
+                hash_file.write(checksum)
             
             # Reset file pointer to beginning for upload
             file.seek(0)
