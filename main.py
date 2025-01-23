@@ -95,9 +95,7 @@ def get_checksum():
     with open('hash.txt') as hash_file: checksum = hash_file.read()
 
 
-    return jsonify({
-                "checksum": checksum
-    }), 200
+    return checksum, 200
 
 
 
