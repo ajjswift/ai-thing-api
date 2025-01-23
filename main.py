@@ -93,7 +93,7 @@ def get_question_route():
         difficulty = request.args.get('difficulty', None)
         if difficulty is not None:
             try:
-                difficulty = int(round(difficulty))
+                difficulty = int(round(float(difficulty)))
                 if difficulty < 1 or difficulty > 5:
                     return jsonify({"error": "Difficulty must be between 1 and 5"}), 400
             except ValueError:
