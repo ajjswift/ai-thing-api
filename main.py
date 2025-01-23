@@ -54,94 +54,47 @@ def get_data():
 @app.route('/question/get', methods=['GET'])
 def get_question_route():
     """Gets questions from the weaviate database and returns to the user."""
-    try:
-        # Validate authorization
-        if 'Authorization' not in request.headers:
-            return jsonify({"error": "Authorization header missing"}), 401
-        if request.headers['Authorization'] != access_key:
-            return jsonify({"error": "Invalid access key"}), 403
-
-        # Get and validate request parameters
-        search_query = request.args.get('search', '').strip()
-        if not search_query:
-            return jsonify({"error": "Search query is required"}), 400
-
-        w_class = request.args.get('class', '').strip()
-        if not w_class:
-            return jsonify({"error": "A valid class is required"}), 400
-        
-        # Validate class exists in Weaviate
-        try:
-            schema = client.schema.get()
-            valid_classes = [c['class'] for c in schema['classes']]
-            if w_class not in valid_classes:
-                return jsonify({"error": f"Invalid class. Must be one of: {', '.join(valid_classes)}"}), 400
-        except Exception as e:
-            return jsonify({"error": "Error validating class: " + str(e)}), 500
-
-        # Parse and validate limit
-        try:
-            limit = int(request.args.get('limit', '2').strip())
-            if limit < 1:
-                return jsonify({"error": "Limit must be greater than 0"}), 400
-            if limit > 100:
-                return jsonify({"error": "Limit cannot exceed 100"}), 400
-        except ValueError:
-            return jsonify({"error": "Limit must be a valid integer"}), 400
-
-        # Get optional difficulty parameter
-        difficulty = request.args.get('difficulty', '0')
-        if difficulty != '0':
-            try:
-                difficulty = int(round(float(difficulty)))
-                if difficulty < 1 or difficulty > 5:
-                    return jsonify({"error": "Difficulty must be between 1 and 5"}), 400
-            except ValueError:
-                return jsonify({"error": "Difficulty must be a valid number between 1 and 5"}), 400
-
-        # Build Weaviate query
-        query = (
-            client.query
-            .get(w_class, ["question", "answer", "incorrect_answers", "marks", "difficulty"])
-            .with_near_text({"concepts": [search_query]})
-            .with_limit(limit)
-            .with_additional(["distance", "id"])
-        )
-
-        # Add difficulty filter if specified
-        if difficulty is not None:
-            query = query.with_where({
-                "path": ["difficulty"],
-                "operator": "Equal",
-                "valueNumber": difficulty
-            })
-
-        # Execute query
-        response = query.do()
-
-        # Validate response structure
-        if not isinstance(response, dict):
-            return jsonify({"error": "Invalid response from database"}), 500
-
-        results = response.get('data', {}).get('Get', {}).get(w_class, [])
-        if not results:
-            return jsonify({"message": "No results found", "search": search_query, difficulty: difficulty, limit: limit}), 404
-
-        # Validate result structure
-        required_fields = ["question", "answer", "incorrect_answers", "marks"]
-        for result in results:
-            if not all(field in result for field in required_fields):
-                return jsonify({"error": "Invalid data structure in results"}), 500
-
-        return jsonify(results)
-
-    except weaviate.exceptions.WeaviateQueryError as e:
-        return jsonify({"error": "Database query error: " + str(e)}), 500
-    except weaviate.exceptions.WeaviateConnectionError as e:
-        return jsonify({"error": "Database connection error: " + str(e)}), 503
-    except Exception as e:
-        return jsonify({"error": "Unexpected error: " + str(e)}), 500
+    # Validate authorization
+    if 'Authorization' not in request.headers:
+        return jsonify({"error": "Authorization header missing"}), 401
+    if request.headers['Authorization'] != access_key:
+        return jsonify({"error": "Invalid access key"}), 403
     
+    search_query = request.args.get('query', '')
+    limit = int(request.args.get('limit', 2))
+    difficulty = int(request.args.get('difficulty', 0))
+    className = request.args.get('class', '')
+    if className == '':
+        return jsonify({
+            "message": "A valid class name must be passed."
+        }), 400
+
+    query = (
+        client.query
+        .get(
+            className, ["question", "answer", "incorrect_answers", "max_marks", "difficulty"]
+        )
+        .with_additional(['distance', 'id'])
+        .with_near_text({
+            "concepts": [search_query]
+        })
+        .with_limit(limit)
+    )
+
+    if difficulty != 0:
+        query = query.with_where({
+            "path": ["difficulty"],
+            "operator": "Equal",
+            "valueInt": difficulty
+        })
+
+    result = query.do()
+
+    print(result)
+    return jsonify({
+        "message": "success"
+    }), 200
+
 
 @app.route('/training_checksum', methods=['GET'])
 def get_checksum():
