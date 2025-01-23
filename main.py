@@ -91,9 +91,7 @@ def get_question_route():
     result = query.do()
 
     print(result)
-    return jsonify({
-        "message": "success"
-    }), 200
+    return result['data']['Get'][className.capitalize()], 200
 
 
 @app.route('/training_checksum', methods=['GET'])
