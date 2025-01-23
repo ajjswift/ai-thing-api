@@ -1,6 +1,9 @@
 import os
 import json
 import io
+import pickle
+import pandas as pd
+import numpy as np
 
 import boto3
 from flask import Flask, jsonify, request, send_file
@@ -98,6 +101,72 @@ def get_checksum():
     return checksum, 200
 
 
+@app.route('/test_data', methods=['POST'])
+def test_data():
+    """Tests data using the current model and returns predictions"""
+    if 'Authorization' not in request.headers or request.headers['Authorization'] != access_key:
+        return jsonify({"error": "Access key required"}), 403
+
+    try:
+        # Get JSON data from request
+        data = request.get_json()
+        if not data or not isinstance(data, list):
+            return jsonify({"error": "Invalid data format. Expected JSON array"}), 400
+
+        # Validate the data structure
+        required_fields = ['difficulty', 'marks', 'max_marks']
+        if not all(isinstance(entry, dict) and all(field in entry for field in required_fields) 
+                  for entry in data):
+            return jsonify({"error": "Invalid data format. Each entry must contain: difficulty, marks, max_marks"}), 400
+
+        # Load and use the latest model
+        model_path = os.path.join('models', 'difficulty_predictor_model.burlywood')
+        if not os.path.exists(model_path):
+            return jsonify({"error": "Model not found"}), 404
+
+        with open(model_path, 'rb') as f:
+            model_state = pickle.load(f)
+
+        # Prepare features using the same logic as in trainer.py
+        df = pd.DataFrame(data)
+        df['performance_ratio'] = df['marks'] / df['max_marks']
+        df['rolling_performance'] = df['performance_ratio'].rolling(window=3, min_periods=1).mean().fillna(df['performance_ratio'])
+        df['performance_trend'] = df['performance_ratio'].rolling(window=3, min_periods=1).apply(
+            lambda x: np.polyfit(range(len(x)), x, 1)[0] if len(x) > 1 else 0
+        ).fillna(0)
+        
+        difficulty_performance = df.groupby('difficulty')['performance_ratio'].mean().to_dict()
+        df['avg_difficulty_performance'] = df['difficulty'].map(difficulty_performance)
+        
+        performance_variance = df['performance_ratio'].std() if len(df) > 1 else 0
+        
+        features = pd.DataFrame({
+            'recent_performance': df['rolling_performance'],
+            'performance_trend': df['performance_trend'],
+            'avg_difficulty_performance': df['avg_difficulty_performance'].fillna(df['performance_ratio'].mean()),
+            'current_difficulty': df['difficulty'],
+            'overall_performance': df['performance_ratio'].mean(),
+            'performance_variance': performance_variance,
+            'max_difficulty_attempted': df['difficulty'].max(),
+            'min_performance': df['performance_ratio'].min(),
+            'max_performance': df['performance_ratio'].max()
+        })
+        
+        features = features.fillna(0)
+        
+        # Make prediction using the model
+        features_scaled = model_state['scaler'].transform(features.iloc[[-1]])
+        prediction = model_state['model'].predict(features_scaled)[0]
+        prediction = round(np.clip(prediction, 1, 5), 2)
+
+        return jsonify({
+            "prediction": prediction,
+            "model_timestamp": model_state.get('timestamp', 'unknown')
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/training_data', methods=['POST', 'GET'])
 def post_training_data():
@@ -106,7 +175,7 @@ def post_training_data():
         return jsonify({"error": "Access key required"}), 403
     
     if request.method == 'POST':
-        """Uploads a .burlywood file to Digital Ocean S3 bucket"""
+        """Uploads a .burlywood file to Digital Ocean S3 bucket and stores locally"""
         if 'file' not in request.files:
             return jsonify({"error": "No file provided"}), 400
             
@@ -125,6 +194,15 @@ def post_training_data():
                 hash_file.write(checksum)
             
             # Reset file pointer to beginning for upload
+            file.seek(0)
+            
+            # Save file locally
+            local_filename = secure_filename(file.filename)
+            local_path = os.path.join('models', local_filename)
+            os.makedirs('models', exist_ok=True)  # Create models directory if it doesn't exist
+            file.save(local_path)
+            
+            # Reset file pointer again for S3 upload
             file.seek(0)
             
             # Upload file to DO Spaces
@@ -147,10 +225,11 @@ def post_training_data():
             return jsonify({
                 "message": "File uploaded successfully",
                 "filename": file_name,
-                "checksum": checksum
+                "checksum": checksum,
             }), 200
 
         except Exception as e:
+            print(e)
             return jsonify({"error": str(e)}), 500
 
     elif request.method == 'GET':
