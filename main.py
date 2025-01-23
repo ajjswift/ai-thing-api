@@ -125,7 +125,7 @@ def get_question_route():
 
         results = response.get('data', {}).get('Get', {}).get(w_class, [])
         if not results:
-            return jsonify({"message": "No results found"}), 404
+            return jsonify({"message": "No results found", "search": search_query, difficulty: difficulty, limit: limit}), 404
 
         # Validate result structure
         required_fields = ["question", "answer", "incorrect_answers", "marks"]
