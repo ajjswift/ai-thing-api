@@ -84,14 +84,14 @@ def get_question_route():
             limit = int(request.args.get('limit', '2').strip())
             if limit < 1:
                 return jsonify({"error": "Limit must be greater than 0"}), 400
-            if limit > 100:  # Add reasonable upper bound
+            if limit > 100:
                 return jsonify({"error": "Limit cannot exceed 100"}), 400
         except ValueError:
             return jsonify({"error": "Limit must be a valid integer"}), 400
 
         # Get optional difficulty parameter
-        difficulty = request.args.get('difficulty', None)
-        if difficulty is not None:
+        difficulty = request.args.get('difficulty', '0')
+        if difficulty != '0':
             try:
                 difficulty = int(round(float(difficulty)))
                 if difficulty < 1 or difficulty > 5:
