@@ -272,6 +272,6 @@ def post_training_data():
             return jsonify({"error": str(e)}), 500
 
 
-if __name__ == '__main__' and client.is_ready():
+if __name__ == '__main__':
     print("Weaviate Connected. Running FLASK")
     app.run(host='0.0.0.0', port=5003, debug=True)
