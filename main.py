@@ -21,18 +21,18 @@ app = Flask(__name__)
 cors = CORS(app)
 
 access_key = os.getenv("ACCESS_KEY")
-
+""" 
 weaviate_url = os.getenv("WEAVIATE_URL")
 api_key = os.getenv("WEAVIATE_API_KEY")
 auth_config = AuthApiKey(api_key=api_key)
-
-client = weaviate.Client(
+ """
+""" client = weaviate.Client(
     url=weaviate_url,
     auth_client_secret=auth_config,
     additional_headers={
         "X-Openai-Api-Key": os.getenv("OPENAI_KEY")
     }
-)
+) """
 
 # Home route
 @app.route('/')
@@ -50,10 +50,10 @@ def get_data():
     }
     return jsonify(data)
 
-# /question/get with input
+""" # /question/get with input
 @app.route('/question/get', methods=['GET'])
 def get_question_route():
-    """Gets questions from the weaviate database and returns to the user."""
+    #Gets questions from the weaviate database and returns to the user.
     # Validate authorization
     if 'Authorization' not in request.headers:
         return jsonify({"error": "Authorization header missing"}), 401
@@ -90,8 +90,12 @@ def get_question_route():
 
     result = query.do()
 
-    print(result)
-    return result['data']['Get'][className.capitalize()], 200
+    result = result['data']['Get'][className.capitalize()]
+
+    code = 200
+    if len(result) == 0:
+        code = 404
+    return result, code """
 
 
 @app.route('/training_checksum', methods=['GET'])
